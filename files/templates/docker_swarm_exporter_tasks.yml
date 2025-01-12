@@ -1,0 +1,22 @@
+---
+groups:
+  - name: docker-exporter.rules
+    rules:
+      - alert: TaskIsDown
+        expr: sum(service_replicas{}) by (service_name, dns_hostname, env, domainname) - sum(task_status_running{}) by (service_name, dns_hostname, env, domainname) > 0
+        for: 60s
+        labels:
+          severity: warning
+        annotations:
+          summary: !unsafe "{{ $labels.dns_hostname }} service {{ $labels.service_name }} has down tasks that should be running."
+          summary_resolved: !unsafe "{{ $labels.dns_hostname }} service {{ $labels.service_name }} all tasks are running."
+          description: !unsafe "For {{ $labels.dns_hostname }} service {{ $labels.service_name }} has {{ .Value }} down tasks."
+      - alert: TaskIsDown
+        expr: sum(service_replicas{}) by (service_name, dns_hostname, env, domainname) / 2 - sum(task_status_running{}) by (service_name, dns_hostname, env, domainname) > 0
+        for: 60s
+        labels:
+          severity: critical
+        annotations:
+          summary: !unsafe "{{ $labels.dns_hostname }} service {{ $labels.service_name }} has many down tasks that should be running."
+          summary_resolved: !unsafe "{{ $labels.dns_hostname }} service {{ $labels.service_name }} all tasks are running."
+          description: !unsafe "For {{ $labels.dns_hostname }} service {{ $labels.service_name }} has {{ .Value }} down tasks."

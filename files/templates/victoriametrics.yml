@@ -11,3 +11,12 @@ groups:
           summary: "Scrape targets in the amount {{ $value }} on host {{ $labels.dns_hostname }} are down."
           summary_resolved: "{{ $labels.dns_hostname }} scrape targets are up."
           description: "Scrape targets in the amount {{ $value }} on host {{ $labels.dns_hostname }} are down."
+      - alert: ScrapeTargetIsUnavailable
+        expr: 'group by (dns_hostname,env,domainname,project,job) (up{} offset 24h unless on (instance) up{}) == 1'
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Scrape target with job {{ $labels.job }} on host {{ $labels.dns_hostname }} is unavailable."
+          summary_resolved: "{{ $labels.job }} scrape target is available."
+          description: "Scrape target with job {{ $labels.job }} on host {{ $labels.dns_hostname }} is unavailable."

@@ -1,0 +1,57 @@
+---
+groups:
+  - name: status_server.rules
+    rules:
+      - alert: BackendServerisDown
+        expr: haproxy_server_status{state="UP"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "In {{ $labels.dns_hostname }} {{ $labels.proxy }} haproxy backend {{ $labels.server }} is down."
+          summary_resolved: "In {{ $labels.dns_hostname }} {{ $labels.proxy }} haproxy backend {{ $labels.server }} is up."
+          description: "In {{ $labels.dns_hostname }} {{ $labels.proxy }} haproxy backend {{ $labels.server }} is down."
+  - name: change_sessions.rules
+    rules:
+      - alert: GreatIncreaseSessions
+        expr: delta (haproxy_backend_current_sessions [3m]) / last_over_time(haproxy_backend_current_sessions [3m]) > 2
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "In {{ $labels.dns_hostname }} {{ $labels.proxy }} haproxy backend has significant increase."
+          summary_resolved: "In {{ $labels.dns_hostname }} {{ $labels.proxy }} haproxy backend is stable now."
+          description: "In {{ $labels.dns_hostname }} {{ $labels.proxy }} haproxy backend has great increase"
+  - name: max_sessions.rules
+    rules:
+      - alert: MaxNumberSessions
+        expr: haproxy_backend_current_sessions > 550
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "In {{ $labels.dns_hostname }} {{ $labels.proxy }} exceeded sessions limit."
+          summary_resolved: "In {{ $labels.dns_hostname }} {{ $labels.proxy }} sessions limit is no longer exceeded."
+          description: "In {{ $labels.dns_hostname }} {{ $labels.proxy }} exceeded sessions limit."
+  - name: high_rate_5xx.rules
+    rules:
+      - alert: HighRate5xx
+        expr: rate(haproxy_backend_http_responses_total{code=~"5xx"}[1m]) > 1
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "In {{ $labels.dns_hostname }} {{ $labels.proxy }} haproxy backend has high rate of 5xx responses."
+          summary_resolved: "In {{ $labels.dns_hostname }} {{ $labels.proxy }} haproxy backend no longer has a high rate of 5xx responses."
+          description: "In {{ $labels.dns_hostname }} {{ $labels.proxy }} haproxy backend has high rate of 5xx responses."
+  - name: high_global_current_rate_connections.rules
+    rules:
+      - alert: HighGlobalCurrentRateConnections
+        expr: haproxy_process_current_connection_rate > 1900
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "In {{ $labels.dns_hostname }} haproxy has high rate of current connections."
+          summary_resolved: "In {{ $labels.dns_hostname }} haproxy no longer has high rate of current connections."
+          description: "In {{ $labels.dns_hostname }} haproxy has high rate of current connections."

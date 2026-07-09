@@ -4,8 +4,8 @@
     state: directory
     path: "{{ vmalert_config_dir }}/templates"
     mode: 0755
-    owner: root
-    group: root
+    owner: "{{ vmalert_uid }}"
+    group: "{{ vmalert_gid }}"
 
 - name: Collect available bundled templates
   ansible.builtin.set_fact:
@@ -54,8 +54,8 @@
     src: "templates/{{ item }}"
     dest: "{{ vmalert_config_dir }}/templates/{{ item }}"
     mode: 0644
-    owner: root
-    group: root
+    owner: "{{ vmalert_uid }}"
+    group: "{{ vmalert_gid }}"
   loop: "{{ vmalert_templates_selected }}"
   loop_control:
     label: "{{ item }}"
@@ -79,8 +79,8 @@
     content: "{{ item.data | to_nice_yaml(indent=2) }}"
     dest: "{{ vmalert_config_dir }}/templates/{{ item.filename }}"
     mode: 0644
-    owner: root
-    group: root
+    owner: "{{ vmalert_uid }}"
+    group: "{{ vmalert_gid }}"
   with_items: "{{ vmalert_additional_alerts }}"
   notify:
     - Reload vmalert docker container
@@ -102,6 +102,7 @@
           restart: always
           labels: "{{ vmalert_docker_labels }}"
           command: "{{ vmalert_command }}"
+          user: "{{ vmalert_uid }}:{{ vmalert_gid }}"
 
       networks:
         default:
@@ -110,9 +111,13 @@
   when: not vmalert_swarm_cluster or vm_swarm_manager is undefined
 
 - name: Deploy vmalert to docker swarm
+  delegate_to: "{{ vm_swarm_manager | default(omit) }}"
+  when:
+    - vmalert_swarm_cluster
+    - vm_swarm_manager is defined
   block:
     - name: Ensure pip installation
-      package:
+      ansible.builtin.package:
         name: "python3-pip"
         state: present
 
@@ -146,7 +151,7 @@
       community.docker.docker_stack:
         state: present
         name: "{{ vmalert_stack_name }}"
-        with_registry_auth: yes
+        with_registry_auth: true
         compose:
           - services:
               vmalert:
@@ -158,12 +163,9 @@
                 volumes:
                   - "{{ vmalert_config_dir }}/templates:/etc/alerts"
                 deploy: "{{ vmalert_swarm_deploy }}"
+                user: "{{ vmalert_uid }}:{{ vmalert_gid }}"
             networks:
               default:
                 external:
                   name: "{{ vmalert_docker_network_name }}"
-      run_once: True
-  delegate_to: "{{ vm_swarm_manager | default(omit) }}"
-  when:
-    - vmalert_swarm_cluster
-    - vm_swarm_manager is defined
+      run_once: true
